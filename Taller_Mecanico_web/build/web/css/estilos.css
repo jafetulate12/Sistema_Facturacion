@@ -1,0 +1,44 @@
+
+span.error{
+    color: red;
+    font-size: 0,8em;
+}
+
+#color{
+    background: #856404
+}
+   
+/* Estilos para el footer */
+footer {
+    background-color: #333; /* Cambia el color de fondo según tus preferencias */
+    color: #fff; /* Cambia el color del texto según tus preferencias */
+    padding: 20px 0; /* Agrega espacio alrededor del contenido del footer */
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+}
+
+.container {
+    text-align: center; /* Centra el contenido del footer */
+}
+
+/* Estilos generales para el cuerpo de la página */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif; /* Cambia la fuente según tus preferencias */
+}
+
+/* Estilos para el contenido principal (ajusta según tus necesidades) */
+main {
+    padding: 20px; /* Agrega espacio alrededor del contenido principal */
+}
+/* Estilos para centrar la imagen horizontalmente */
+.image-container {
+    text-align: center; /* Centra el contenido horizontalmente */
+}
+
+.image-container img {
+    display: block; /* Hace que la imagen sea un elemento de bloque */
+    margin: 0 auto; /* Centra la imagen horizontalmente */
+}

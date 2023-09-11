@@ -1,0 +1,445 @@
+USE TALLER_JAFET
+GO
+
+--------------------------------
+-- PS
+go
+CREATE PROCEDURE ActualizarUltimaFacturaCompra
+    (@TotalCompra DECIMAL(10,2) ,
+	@MSJ VARCHAR(200) OUT) -- El valor del TOTALCOMPRA que se enviará como parámetro
+AS
+BEGIN
+    -- Declarar una variable para almacenar la última ID generada
+    DECLARE @UltimaID INT
+    
+    -- Obtener la última ID generada en FACTURACOMPRA
+    SELECT @UltimaID = MAX(IDFACTURACOMPRA) FROM FACTURACOMPRA
+    
+    -- Actualizar la última factura con el TOTALCOMPRA proporcionado
+    UPDATE FACTURACOMPRA
+    SET TOTALCOMPRA = @TotalCompra
+    WHERE IDFACTURACOMPRA = @UltimaID
+END;
+go
+
+SELECT*FROM FACTURAVENTA
+
+go
+CREATE OR ALTER PROCEDURE GUARDARDETALLECOMPRA
+    @IDREFACCION INT OUT,
+    @CANTIDAD INT,
+    @SUBTOTAL INT,
+    @MSJ VARCHAR(200) OUT
+AS
+BEGIN
+    DECLARE @ExistingIDREFACCION INT;
+
+    -- Insertar el registro en TEMPCargaDetallesCompra
+    INSERT INTO TEMPCargaDetallesCompra (IDREFACCION, CANTIDAD, SUBTOTAL)
+    VALUES (@IDREFACCION, @CANTIDAD, @SUBTOTAL);
+
+    SET @MSJ = 'Detalle ingresado en TEMPCargaDetallesCompra.';
+
+    -- Verificar si la IDREFACCION ya existe en INVENTARIO
+    SELECT @ExistingIDREFACCION = IDREFACCION
+    FROM INVENTARIO
+    WHERE IDREFACCION = @IDREFACCION;
+
+    IF @ExistingIDREFACCION IS NULL
+    BEGIN
+        -- Si la IDREFACCION no existe en INVENTARIO, insertarla
+        INSERT INTO INVENTARIO (IDREFACCION, CANTIDAD)
+        VALUES (@IDREFACCION, @CANTIDAD);
+
+        SET @MSJ = @MSJ + ' Registro de inventario creado.';
+    END
+    ELSE
+    BEGIN
+        -- Si la IDREFACCION ya existe en INVENTARIO, actualizar la cantidad
+        UPDATE INVENTARIO
+        SET CANTIDAD = CANTIDAD + @CANTIDAD
+        WHERE IDREFACCION = @IDREFACCION;
+
+        SET @MSJ = @MSJ + ' Registro de inventario actualizado.';
+    END
+END;
+go
+
+
+
+
+GO
+CREATE PROCEDURE ELIMINAR(@IDCLIENTE INT, @MSJ VARCHAR(200) OUT)
+	AS BEGIN
+		IF NOT EXISTS(SELECT 1 FROM CLIENTE WHERE IDCLIENTE=@IDCLIENTE) 
+			SET @MSJ='EL CLIENTE NO EXISTE'
+		ELSE
+			BEGIN
+				IF NOT EXISTS(SELECT 1 FROM FACTURAVENTA WHERE IDCLIENTE = @IDCLIENTE) 
+					BEGIN
+						DELETE FROM CLIENTE WHERE IDCLIENTE=@IDCLIENTE
+						SET @MSJ='Cliente eliminado desde el Procedimiento Almacenado de la BD'
+					END
+				ELSE
+					SET @MSJ='EL CLIENTE NO SE PUEDE ELIMINAR YA QUE TIENE FACTURAS ASOCIADOS'
+			END
+	END
+GO
+
+
+
+
+
+GO
+CREATE PROCEDURE GUARDARCLIENTE(@IDCLIENTE INT OUT,
+							@NOMBRECLIENTE VARCHAR(200),
+							@TELEFONOCLIENTE VARCHAR(200),
+							@CEDULACLIENTE VARCHAR(200),
+							@CORREOCLIENTE VARCHAR(200),
+							@MSJ VARCHAR(200) OUT)
+	AS BEGIN
+		IF NOT EXISTS(SELECT 1 FROM CLIENTE WHERE IDCLIENTE=@IDCLIENTE) 
+			BEGIN
+				INSERT INTO CLIENTE(NOMBRECLIENTE,TELEFONOCLIENTE,CEDULACLIENTE,CORREOCLIENTE) 
+				VALUES (@NOMBRECLIENTE,@TELEFONOCLIENTE,@CEDULACLIENTE,@CORREOCLIENTE)
+				SET @MSJ='CLIENTE INGRESADO'
+				SET @IDCLIENTE=IDENT_CURRENT('CLIENTES')
+			END
+		ELSE
+			BEGIN
+				UPDATE CLIENTE SET NOMBRECLIENTE=@NOMBRECLIENTE, 
+				TELEFONOCLIENTE=@TELEFONOCLIENTE,CEDULACLIENTE=@CEDULACLIENTE,
+				CORREOCLIENTE=@CORREOCLIENTE
+				WHERE IDCLIENTE=@IDCLIENTE
+				SET @MSJ='CLIENTE MODIFICADO'
+			END
+	END
+GO
+
+
+GO
+CREATE or alter PROCEDURE GUARDARFACTURA(@IDFACTURACOMPRA INT OUT,
+							@IDADMINISTRADOR INT,
+							@MSJ VARCHAR(200) OUT)
+	AS BEGIN
+		IF NOT EXISTS(SELECT 1 FROM FACTURACOMPRA WHERE IDFACTURACOMPRA=@IDFACTURACOMPRA) 
+			BEGIN
+				INSERT INTO FACTURACOMPRA(IDADMINISTRADOR) 
+				VALUES (@IDADMINISTRADOR)
+				SET @MSJ='Factura en proceoso'
+				SET @IDFACTURACOMPRA=IDENT_CURRENT('FACTURACOMPRA')
+			END
+	END
+GO
+
+
+
+
+
+GO
+CREATE PROCEDURE GUARDARADMISTRADOR(@IDADMINISTRADOR INT OUT,
+							@NOMBREADMINISTRADOR VARCHAR(200),
+							@TELEFONOADMINISTRADOR VARCHAR(200),
+							@CEDULAADMINISTRADOR VARCHAR(200),
+							@CORREOADMINISTRADOR VARCHAR(200),
+							@MSJ VARCHAR(200) OUT)
+	AS BEGIN
+		IF NOT EXISTS(SELECT 1 FROM ADMINISTRADOR WHERE IDADMINISTRADOR=@IDADMINISTRADOR) 
+			BEGIN
+				INSERT INTO ADMINISTRADOR(NOMBREADMINISTRADOR,TELEFONOADMINISTRADOR,CEDULAADMINISTRADOR,CORREOADMINISTRADOR) 
+				VALUES (@NOMBREADMINISTRADOR,@TELEFONOADMINISTRADOR,@CEDULAADMINISTRADOR,@CORREOADMINISTRADOR)
+				SET @MSJ='ENCARGADO INGRESADO'
+				SET @IDADMINISTRADOR=IDENT_CURRENT('ADMINISTRADOR')
+			END
+		ELSE
+			BEGIN
+				UPDATE ADMINISTRADOR SET NOMBREADMINISTRADOR=@NOMBREADMINISTRADOR, 
+				TELEFONOADMINISTRADOR=@TELEFONOADMINISTRADOR,CEDULAADMINISTRADOR=@CEDULAADMINISTRADOR,
+				CORREOADMINISTRADOR=@CORREOADMINISTRADOR
+				WHERE IDADMINISTRADOR=@IDADMINISTRADOR
+				SET @MSJ='ADMINISTRADOR MODIFICADO'
+			END
+	END
+GO
+
+GO
+CREATE PROCEDURE Eliminar_A(@IDADMINISTRADOR INT, @MSJ VARCHAR(200) OUT)
+	AS BEGIN
+		IF NOT EXISTS(SELECT 1 FROM ADMINISTRADOR WHERE IDADMINISTRADOR=@IDADMINISTRADOR) 
+			SET @MSJ='EL ADMINISTRADOR NO EXISTE'
+		ELSE
+			BEGIN
+				IF NOT EXISTS(SELECT 1 FROM FACTURAVENTA WHERE IDADMINISTRADOR = @IDADMINISTRADOR) 
+					BEGIN
+						DELETE FROM ADMINISTRADOR WHERE IDADMINISTRADOR=@IDADMINISTRADOR
+						SET @MSJ='ADMINISTRADOR eliminado desde el Procedimiento Almacenado de la BD'
+					END
+				ELSE
+					SET @MSJ='EL ADMINISTRADOR NO SE PUEDE ELIMINAR YA QUE REALIZO FACTURAS '
+			END
+	END
+GO
+
+GO
+CREATE PROCEDURE EliminarDetalle(@ID INT, @MSJ VARCHAR(200) OUT)
+	AS BEGIN
+		IF NOT EXISTS(SELECT 1 FROM TEMPCargaDetallesCompra WHERE ID=@ID) 
+			SET @MSJ='EL DETALLE NO EXISTE'
+		ELSE
+			BEGIN
+						DELETE FROM TEMPCargaDetallesCompra WHERE ID=@ID
+						SET @MSJ='DETALLE eliminado desde el Procedimiento Almacenado de la BD'
+					END
+	     END
+GO
+
+
+-- este crea la factura
+GO
+CREATE or alter PROCEDURE GUARDARFACTURAVenta(@IDFACTURAVENTA INT OUT,
+							@IDADMINISTRADOR INT,
+							@IDCLIENTE INT,
+							@MSJ VARCHAR(200) OUT)
+	AS BEGIN
+		IF NOT EXISTS(SELECT 1 FROM FACTURAVENTA WHERE IDFACTURAVENTA=@IDFACTURAVENTA) 
+			BEGIN
+				INSERT INTO FACTURAVENTA(IDADMINISTRADOR,IDCLIENTE) 
+				VALUES (@IDADMINISTRADOR,@IDCLIENTE)
+				SET @MSJ='Factura en proceoso'
+				SET @IDFACTURAVENTA=IDENT_CURRENT('FACTURAVENTA')
+			END
+	END
+GO
+
+
+
+GO
+CREATE PROCEDURE ActualizarUltimaFacturaVenta
+    (@TotalCompra DECIMAL(10,2) ,
+	@MSJ VARCHAR(200) OUT) -- El valor del TOTALCOMPRA que se enviará como parámetro
+AS
+BEGIN
+    -- Declarar una variable para almacenar la última ID generada
+    DECLARE @UltimaID INT
+    
+    -- Obtener la última ID generada en FACTURACOMPRA
+    SELECT @UltimaID = MAX(IDFACTURAVENTA) FROM FACTURAVENTA
+    
+    -- Actualizar la última factura con el TOTALCOMPRA proporcionado
+    UPDATE FACTURAVENTA
+    SET TOTALVENTA = @TotalCompra
+    WHERE IDFACTURAVENTA = @UltimaID
+END;
+GO
+
+
+
+
+
+
+
+
+
+GO
+CREATE OR ALTER PROCEDURE EliminarDetalleVenta
+    @IdDetalleVenta INT,
+    @Mensaje VARCHAR(200) OUTPUT
+AS
+BEGIN
+    BEGIN TRANSACTION; -- Iniciar una transacción para asegurar la consistencia
+
+    -- Verificar si el detalle de venta existe
+    IF NOT EXISTS (SELECT 1 FROM Temp_DETALLEVENTA WHERE IDDETALLEVENTA = @IdDetalleVenta) 
+    BEGIN
+        SET @Mensaje = 'El detalle de venta no existe.';
+    END
+    ELSE
+    BEGIN
+        DECLARE @IdRefaccion INT;
+        DECLARE @Cantidad INT;
+
+        -- Obtener los datos del detalle de venta a eliminar
+        SELECT @IdRefaccion = IDREFACCION, @Cantidad = CANTIDAD
+        FROM Temp_DETALLEVENTA
+        WHERE IDDETALLEVENTA = @IdDetalleVenta;
+
+        -- Eliminar el registro de detalle de venta
+        DELETE FROM Temp_DETALLEVENTA WHERE IDDETALLEVENTA = @IdDetalleVenta;
+
+        -- Actualizar la cantidad en la tabla INVENTARIO sumando la cantidad eliminada
+        UPDATE INVENTARIO
+        SET CANTIDAD = CANTIDAD + @Cantidad
+        WHERE IDREFACCION = @IdRefaccion;
+
+        SET @Mensaje = 'Detalle de venta eliminado y cantidad en inventario actualizada exitosamente.';
+    END
+
+    COMMIT; -- Confirmar la transacción
+END;
+GO
+--------------------
+
+
+
+
+
+
+
+
+---------------------
+
+
+------ TRIGERS
+
+
+
+-- carga el id de factura compra en el tempdetallecompra
+GO
+CREATE TRIGGER tr_InsertarUltimoIDFacturaCompra
+ON TEMPCargaDetallesCompra
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @UltimoIDFacturaCompra INT;
+
+    -- Obtener el último IDFACTURACOMPRA de FACTURACOMPRA
+    SELECT @UltimoIDFacturaCompra = MAX(IDFACTURACOMPRA) FROM FACTURACOMPRA;
+
+    -- Actualizar los registros recién insertados en TEMPCargaDetallesCompra con el último IDFACTURACOMPRA
+    UPDATE TEMPCargaDetallesCompra
+    SET IDFACTURACOMPRA = @UltimoIDFacturaCompra
+    WHERE ID IN (SELECT ID FROM INSERTED);
+END;
+GO
+
+
+
+-- favtura venta
+
+
+GO
+CREATE TRIGGER tr_InsertarUltimoIDFacturaVENTA
+ON Temp_DETALLEVENTA
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @UltimoIDFacturaVENTA INT;
+
+    -- Obtener el último IDFACTURACOMPRA de FACTURACOMPRA
+    SELECT @UltimoIDFacturaVENTA = MAX(IDFACTURAVENTA) FROM FACTURAVENTA;
+
+    -- Actualizar los registros recién insertados en TEMPCargaDetallesCompra con el último IDFACTURACOMPRA
+    UPDATE Temp_DETALLEVENTA
+    SET IDFACTURAVENTA = @UltimoIDFacturaVENTA
+    WHERE IDDETALLEVENTA IN (SELECT IDDETALLEVENTA FROM INSERTED);
+END;
+GO
+
+
+--Triger que se dispara a el actualizar factura compra 
+go
+CREATE OR ALTER TRIGGER ActualizarDetalleCompra
+ON FACTURACOMPRA
+AFTER UPDATE
+AS
+BEGIN
+    -- Insertar datos desde TEMPCargaDetallesCompra a DETALLECOMPRA
+    INSERT INTO DETALLECOMPRA (IDDETALLECOMPRA, IDFACTURACOMPRA, IDREFACCION, CANTIDAD, SUBTOTAL)
+    SELECT ID, IDFACTURACOMPRA, IDREFACCION, CANTIDAD, SUBTOTAL
+    FROM TEMPCargaDetallesCompra
+    WHERE IDFACTURACOMPRA IN (SELECT IDFACTURACOMPRA FROM INSERTED);
+
+    -- Borrar registros de TEMPCargaDetallesCompra
+    DELETE FROM TEMPCargaDetallesCompra
+   
+END;
+go
+
+
+
+
+-- actualiza
+GO
+CREATE OR ALTER TRIGGER ActualizarDetalleVenta
+ON FACTURAVENTA
+AFTER UPDATE
+AS
+BEGIN
+    -- Insertar datos desde TEMPCargaDetallesCompra a DETALLEVENTA
+    INSERT INTO DETALLEVENTA (IDFACTURAVENTA, IDREFACCION, CANTIDAD, IDSERVICIOS, SUBTOTAL)
+    SELECT
+        T.IDFACTURAVENTA,
+        ISNULL(T.IDREFACCION, 0),  -- Asignar 0 si IDREFACCION es NULL
+        T.CANTIDAD,
+        ISNULL(T.IDSERVICIOS, 0),  -- Asignar 0 si IDSERVICIOS es NULL
+        T.SUBTOTAL
+    FROM Temp_DETALLEVENTA T
+    WHERE
+        T.IDFACTURAVENTA IN (SELECT IDFACTURAVENTA FROM INSERTED);
+
+    -- Borrar registros de TEMPCargaDetallesCompra
+    DELETE FROM Temp_DETALLEVENTA
+    WHERE
+        IDFACTURAVENTA IN (SELECT IDFACTURAVENTA FROM INSERTED);
+END;
+go
+
+
+
+
+
+
+-- insertar sevicio
+go
+CREATE OR ALTER PROCEDURE InsertarDetalleVentaSer
+    @IdServicio INT,
+    @Subtotal INT,
+    @Mensaje VARCHAR(200) OUTPUT
+AS
+BEGIN
+    BEGIN TRANSACTION; -- Iniciar una transacción para asegurar la consistencia
+
+    -- Insertar el registro en Temp_DETALLEVENTA
+    INSERT INTO Temp_DETALLEVENTA (IDSERVICIOS, SUBTOTAL)
+    VALUES (@IdServicio, @Subtotal);
+
+    SET @Mensaje = 'Detalle de venta insertado y inventario actualizado exitosamente.';
+
+    COMMIT; -- Confirmar la transacción
+END;
+go
+
+
+
+	-- inserta y actualiza de venta a inventario descuenta
+GO
+CREATE OR ALTER PROCEDURE InsertarDetalleVentaYActualizarInventario
+    @IdRefaccion INT,
+    @Cantidad INT,
+    @Subtotal INT,
+    @Mensaje VARCHAR(200) OUTPUT
+AS
+BEGIN
+    BEGIN TRANSACTION; -- Iniciar una transacción para asegurar la consistencia
+
+    -- Insertar el registro en Temp_DETALLEVENTA
+    INSERT INTO Temp_DETALLEVENTA (IDREFACCION, CANTIDAD, SUBTOTAL)
+    VALUES (@IdRefaccion, @Cantidad, @Subtotal);
+
+    -- Actualizar la cantidad en la tabla INVENTARIO
+    UPDATE INVENTARIO
+    SET CANTIDAD = CANTIDAD - @Cantidad
+    WHERE IDREFACCION = @IdRefaccion;
+
+    SET @Mensaje = 'Detalle de venta insertado y inventario actualizado exitosamente.';
+
+    COMMIT; -- Confirmar la transacción
+END;
+GO
+
+
+
+
+
+
+
